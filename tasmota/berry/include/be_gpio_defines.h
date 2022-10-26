@@ -249,6 +249,8 @@ const be_const_member_t lv_gpio_constants[] = {
     { "SOLAXX1_RTS", (int32_t) GPIO_SOLAXX1_RTS },
     { "SOLAXX1_RX", (int32_t) GPIO_SOLAXX1_RX },
     { "SOLAXX1_TX", (int32_t) GPIO_SOLAXX1_TX },
+    { "VICTRON_RX", (int32_t) GPIO_VICTRON_RX },
+    { "VICTRON_TX", (int32_t) GPIO_VICTRON_TX },
     { "SPI_CLK", (int32_t) GPIO_SPI_CLK },
     { "SPI_CS", (int32_t) GPIO_SPI_CS },
     { "SPI_DC", (int32_t) GPIO_SPI_DC },
