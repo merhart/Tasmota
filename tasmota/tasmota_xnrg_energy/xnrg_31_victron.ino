@@ -41,8 +41,11 @@ struct {
   int32_t power[3] = { 0 };
 } victronValues;
 
+//std::optional
+struct optional{
+}
 
-struct {
+struct blueSolar {
   uint32_t  PID       = 0;            // Product ID for BlueSolar MPPT 
   uint16_t  FW        = 0;            // Firmware version of controller
   uint8_t   SER[16]  = {0};          // Serial number
@@ -63,6 +66,22 @@ struct {
   uint8_t   CRC       = 0;            // Checksum
 } blueSolarValues;
 
+void parse_integral(const char * val, void* field){
+  *((int*)field) = atoi(val);
+}
+void parse_pid(const char * val, void* field){
+  strcpy((char*)field, val);
+  strcpy(blueSolarValues)
+}
+struct {
+  char label[16];
+  void (*parse)(const char*, void*);
+  void* field;
+} fields[] = {
+  {"PID", parse_integral, &blueSolarValues.PID},
+  {"PID", parse_pid, &blueSolarValues.PID},
+};
+
 TasmotaSerial *victronSerial;
 
 /*********************************************************************************************/
@@ -76,7 +95,7 @@ uint8_t victron_calculateCRC(uint8_t *message, uint8_t len)
   return checksum;
 }
 
-int victron_parse_live_data(uint8_t *ReadBuffer, int len, const char* target) {
+int victron_parse_live_data(uint8_t *ReadBuffer, int len) {
 	// Read VE.Direct lines from the serial port
 	// Search for the label specified by enum target
 	// Extract and return the corresponding value
@@ -98,11 +117,12 @@ int victron_parse_live_data(uint8_t *ReadBuffer, int len, const char* target) {
         label = strtok(line, "\t");
         //AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Line: %s"), line);
 	      if (!(label == NULL)) {
-	        if (strcmp(label, target) == 0) {	
+          for (size_t i = 0; i < (sizeof(fields) / sizeof(fields[0])); ++i) {
+            if (strcmp(label, fields[i].label))
+              continue;
+            	
             value_str = strtok(NULL, "\t");
-            ret = atoi(value_str);
-            AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Key: %s -> Value: %d"), label, ret);
-            //Serial.printf("key: %s Value: %f\n", label, value_str);
+            fields[i].parse(value_str, fields[i].field);
           }
           line[0] = '\0';
 	        idx = 0;
