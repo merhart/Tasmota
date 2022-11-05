@@ -1,8 +1,7 @@
 /*
-  xnrg_12_solaxX1.ino - Solax X1 inverter RS485 support for Tasmota
+  xnrg_31_victron.ino - Victron Products Ve.direct support for Tasmota
 
-  Copyright (C) 2021 by Pablo Zerón
-  Copyright (C) 2022 by Stefan Wershoven
+  Copyright (C) 2022 by Michael Erhart
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,7 +18,7 @@
 */
 
 #ifdef USE_ENERGY_SENSOR
-#ifdef USE_VICTRON_BLUE_SOLAR
+#ifdef USE_VICTRON
 /*********************************************************************************************\
  * Victron
  * https://www.atakale.com.tr/image/catalog/urunler/charger/victron/pdf/victron_energy_haberlesme_protokolu_VE.Direct-Protocol-3.29.pdf
@@ -28,13 +27,22 @@
 #define XNRG_33            33
 
 #ifndef VICTRON_SPEED
-#define VICTRON_SPEED      19200    // default victron rs485 speed
+#define VICTRON_SPEED      19200    // default victron serial speed
 #endif
 
-#define D_VICTRON_BLUE_SOLAR         "Victron"
+#define D_VICTRON                    "Victron"
+
+#define D_CMND_VICTRON_READ_HISTORY  "ReadHistory"
+#define D_CMND_VICTRON_PING          "Ping"
+
+const char kVictronCommands[] PROGMEM = "Victron|"
+  D_CMND_VICTRON_READ_HISTORY "|" D_CMND_VICTRON_PING;
+
+void(* const VictronCommands[])(void) PROGMEM = {
+  &CmndReadHistory, &CmndVictronPing
+};
 
 #include <TasmotaSerial.h>
-
 
 struct PID2DeviceName {
   const char* name;
@@ -174,15 +182,21 @@ PID2DeviceName DeviceLookUp[] = {
   "Phoenix Smart IP43 Charger 24|16 (3) 0xA347
 }
 */
-const char* EnergyFieldNames[]{
+const char* EnergyFieldNames[] = {
   "V",
-  "i"
-}
+  "I",
+  "H20",
+  "H22",
+  "H18"
+};
 
-float EnergyFields[]{
-  Energy.voltage[0],
-  Energy.current[0],
-}
+float* EnergyFields[] = {
+  &Energy.voltage[0],
+  &Energy.current[0],
+  &Energy.daily_sum,
+  &Energy.yesterday_sum,
+  &Energy.total_sum
+};
 
 struct VictronField {
   bool valid;
@@ -198,7 +212,6 @@ enum VictronFieldType {
   TYPE_FLOAT,
   TYPE_BOOL
 };
-
 struct VictronFieldDefinition {
   const char* label;
   const char* description;
@@ -207,9 +220,16 @@ struct VictronFieldDefinition {
   const char* unit;
 
   bool try_parse(VictronField* field, const char* lbl, const char* value) {
-    if (strcmp(label, lbl))
+    float *energyTmp = NULL;
+
+    if (strcasecmp(label, lbl))
       return false;
 
+    for(size_t i=0;i<(sizeof(EnergyFieldNames)/sizeof(EnergyFieldNames[0])); ++i){
+      if(!strcasecmp(lbl, EnergyFieldNames[i])){
+        energyTmp = EnergyFields[i];
+      }
+    }
     switch (type) {
       case TYPE_INT:
         field->int_value = strtol(value, NULL, 0);
@@ -217,13 +237,16 @@ struct VictronFieldDefinition {
       case TYPE_FLOAT:
         field->float_value = atof(value);
         field->float_value /= divider;
+        if(energyTmp){
+          *energyTmp = field->float_value;
+          AddLog(LOG_LEVEL_DEBUG, PSTR("Energy field: %s = %f"),lbl, *energyTmp);
+        }
         break;
       case TYPE_BOOL:
         field->bool_value = !strcmp(value, "ON");
         break;
     }
     field->valid = true;
-
     return true;
   }
 
@@ -331,8 +354,6 @@ VictronFieldDefinition victronFieldDefs[] = {
 
 VictronField victronFields[sizeof(victronFieldDefs) / sizeof(victronFieldDefs[0])];
 
-
-
 TasmotaSerial *victronSerial;
 
 /*********************************************************************************************/
@@ -353,22 +374,23 @@ void victron_parse_live_data(uint8_t *ReadBuffer, int len) {
   char* label;
   char* value_str;
   
-  for(uint8_t i=0; i<len; ++i){
+  for(size_t i=0; i<len; ++i){
 	  uint8_t b = ReadBuffer[i]; 
-	  if (!((b == -1) || (b == '\r'))) { 	// Ignore '\r' and empty reads
-			if (!(b == '\n')) { 				// EOL
-				line[idx++] = b;		// Add it to the buffer 
+	  //if (!((b == -1) || (b == '\r'))) { 	// Ignore '\r' and empty reads
+		if (!(b == '\r')) { 	// Ignore '\r' and empty reads
+    	if (!(b == '\n')) { 				      // EOL
+				line[idx++] = b;		            // Add it to the buffer 
 			}
       else{
-        line[idx] = '\0';						// Terminate the string
+        line[idx] = '\0';						    // Terminate the string
         label = strtok(line, "\t");
 	      if (!(label == NULL)) {
           value_str = strtok(NULL, "\t");
           AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Label: %s -> Value: %s"), label, value_str);
           for (size_t i = 0; i < (sizeof(victronFieldDefs) / sizeof(victronFieldDefs[0])); ++i) {
-            if (!strcmp(label, victronFieldDefs[i].label))
+            if (!strcasecmp(label, victronFieldDefs[i].label)){
               victronFieldDefs[i].try_parse(&victronFields[i], label, value_str);
-
+            }
           }
           line[0] = '\0';
 	        idx = 0;
@@ -401,15 +423,18 @@ void victron_EverySecond(void) {
   if(bytesReceived){
     victron_parse_live_data(DataRead, bytesReceived);
     Energy.phase_count = 1;
-    Energy.data_valid[0] = ENERGY_WATCHDOG;
-    Energy.current[0] =      1.78; // AC Current
-    Energy.voltage[0] =      14.2; // AC Voltage
-    Energy.frequency[0] =    50; // AC Frequency
-    Energy.active_power[0] = 20; // AC Power
+    Energy.voltage_common = true;
+    Energy.data_valid[0] = 0;
+    Energy.active_power[0] = Energy.voltage[0] * abs(Energy.current[0]);
+    //Energy.current[0] =      1.78; // AC Current
+    //Energy.voltage[0] =      14.2; // AC Voltage
+    //Energy.frequency[0] =    50; // AC Frequency
+    //Energy.active_power[0] = 20; // AC Power
     Energy.type_dc = true;
+    //AddLog(LOG_LEVEL_DEBUG, PSTR("Energy Volts: %f | Energy current: %f"),Energy.voltage[0], Energy.current[0]);
   }
 
-  EnergyUpdateToday();
+  //EnergyUpdateToday();
   
 }
 
@@ -421,10 +446,10 @@ void victron_DrvInit(void)
   //Energy.frequency_common = NRG_DUMMY_F_COMMON;  // Phase frequency = false, Common frequency = true
   //Energy.type_dc = NRG_DUMMY_DC;                 // AC = false, DC = true;
   //Energy.use_overtemp = NRG_DUMMY_OVERTEMP;      // Use global temperature for overtemp detection
-  //if (PinUsed(GPIO_VICTRON_RX) && PinUsed(GPIO_VICTRON_TX)) {
-  //  TasmotaGlobal.energy_driver = XNRG_33;
-  //}
-  TasmotaGlobal.energy_driver = XNRG_33;
+  if (PinUsed(GPIO_VICTRON_RX) && PinUsed(GPIO_VICTRON_TX)) {
+    TasmotaGlobal.energy_driver = XNRG_33;
+  }
+  //TasmotaGlobal.energy_driver = XNRG_33;
   AddLog(LOG_LEVEL_DEBUG, PSTR("Victron DrvInit"));
 }
 
@@ -443,18 +468,28 @@ void victron_SnsInit(void)
   AddLog(LOG_LEVEL_INFO, "VICTRON SnsInit");
 }
 
-
 void victron_Show(bool json){
   int jsonElements = 0;
   for (size_t i = 0; i < (sizeof(victronFieldDefs) / sizeof(victronFieldDefs[0])); ++i) {
     jsonElements += victronFieldDefs[i].output(&victronFields[i], json, jsonElements);
   }
-  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Json Elements appended: %d"), jsonElements);
-  
+  //AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Json Elements appended: %d"), jsonElements);
   if(json){
     ResponseAppend_P(PSTR("}"));
   }
+}
 
+void CmndReadHistory(void){
+  //if (!strcasecmp(XdrvMailbox.data, "ReadHistory")) {
+  //  AddLog(LOG_LEVEL_DEBUG, PSTR("Victron Command Received"));
+  //  //return true;
+  //}
+  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron CMD"));
+  //return false;
+}
+
+void CmndVictronPing(){
+  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron CMD"));
 }
 /*********************************************************************************************\
  * Interface
@@ -482,9 +517,12 @@ bool Xnrg33(uint8_t function)
     case FUNC_PRE_INIT:
       victron_DrvInit();
       break;
+    case FUNC_COMMAND:
+      result = DecodeCommand(kVictronCommands, VictronCommands);
+      break;
   }
   return result;
 }
 
-#endif  // USE_VICTRON_BLUE_SOLAR_NRG
+#endif  // USE_VICTRON_NRG
 #endif  // USE_ENERGY_SENSOR

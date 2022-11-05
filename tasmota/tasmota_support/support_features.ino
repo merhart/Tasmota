@@ -840,7 +840,7 @@ void ResponseAppendFeatures(void)
 #if defined(USE_ENERGY_SENSOR) && defined(USE_MODBUS_ENERGY)
     feature9 |= 0x00000010;  // xnrg_29_modbus.ino
 #endif
-#if defined(USE_ENERGY_SENSOR) && defined(USE_VICTRON_BLUE_SOLAR)
+#if defined(USE_ENERGY_SENSOR) && defined(USE_VICTRON)
     feature9 |= 0x00000020;  // xnrg_31_victron.ino
 #endif
 
