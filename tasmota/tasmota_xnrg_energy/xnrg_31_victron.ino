@@ -44,6 +44,7 @@ void(* const VictronCommands[])(void) PROGMEM = {
 
 #include <TasmotaSerial.h>
 
+
 struct PID2DeviceName {
   const char* name;
   int pid;
@@ -291,15 +292,76 @@ struct VictronFieldDefinition {
   }
 };
 
+
+#define D_BATTERY "Battery"
+#define D_AUXILIARY "Auxiliary"
+#define D_PANEL "Panel"       // As in photovoltaic panel
+
+/*
+#define D_BATTERY "Battery"       
+#define D_BATTERY2 "Battery 2 Voltage"    
+#define D_BATTERY2"Battery 3 Voltage"  
+#define D_AUXILIARY_VOLTAGE "Auxiliary Voltage"                    
+#define D_PANEL_VOLTAGE "Panel Voltage"       
+#define D_PANEL_POWER "Panel Power"         
+#define D_BATTERY_CURRENT "Battery Current"      
+#define D_BATTERY_CURRENT" Battery 2 Current"     
+#define D_BATTERY_CURRENT" Battery 3 Current"    
+#define D_LOAD_CURRENT "Load Current"        
+#define D_LOAD_STATE "Load State"            
+#define D_BATTERY_TEMPERATURE "Battery Temperature"  
+#define D_INSTANT_POWER "Instantaneous Power"   
+#define D_CONSUMED_AMP_H "Consumed Amp Hours"    
+#define D_SOC "State-Of-Charge"       
+#define D_TIME_TO_GO "Time-To-Go"            
+#define D_ALARM_CONDITION "Alarm Condition"        
+#define D_RELAY_STATE "Relay State"           
+#define D_ALARM_REASON "Alarm Reason"         
+#define D_OFF_REASON "Off Reason"        
+#define D_DEEPEST_DISCHARGE "Deepest Discharge"   
+#define D_LAST_DISCHARGE_DEPTH "Last Discharge Depth" 
+#define D_AVG_DEPTH "Average Discharge Depth"
+#define D_CHARGE_CYCLES "Charge Cycles"        
+#define D_FULL_DISCHARGES "Full Discharges"       
+#define D_TOTAL_AH_DRAWN "Comulative Ah drawn"
+#define D_MIN_BAT_VOLT "Min Battery Voltage"  
+#define D_MAX_BAT_VOLT "Max Battery Voltage"
+#define D_SECS_SINCE_FULL_CHARGE "Secs Since Full Charge",
+#define D_AUTOMATIC_SYNCS "Automatic Syncs"     
+#define D_LOW_VOLT_ALARMS "Low Voltage Alarms"   
+#define D_HIGH_VOLT_ALARMS "High Voltage Alarms" 
+#define D_LOW_AUX_VOLT_ALARM "Low Aux Voltage Alarms"
+#define D_HIGH_AUX_VOLT_ALARM"High Aux Voltage Alarms"
+#define D_MIN_AUX_VOLT"Min Aux Voltage"      
+#define D_MAX_AUX_VOLT"Max Aux Voltage"      
+#define D_DISCHARGED_ENERGY "Discharged Energy"   
+#define D_CHARGED_ENERGY "Charged Energy"       
+#define D_YIELD_TOTAL "Yield Total"           
+#define D_YIELD_TODAY "Yield Today"           
+#define D_MAX_POWER_TODAY "Max Power Today"     
+#define D_YIELD_YESTERDAY "Yield Yesterday"      
+#define D_MAX_POWER_YESTERDAY "Max Power Yesterday" 
+#define D_ERROR_CODE "Error Code"           
+#define D_STATE_OF_OPERATION "State Of Operation"    
+#define D_FIRMWARE_VERSION "Firmware Version"      
+#define D_PRODUCT_ID "Product ID"            
+#define D_DAY_SEQUENCE "Day Sequence"          
+#define D_DEVICE_MODE "Device Mode"      
+#define D_AC_OUTPUT_VOLTAGE "AC Output Voltage"    
+#define D_AC_OUTPUT_CURRENT "AC Output Current"   
+#define D_AC_OUT_APPARENT_CURRENT "AC output app. Current"
+#define D_WARNING_REASON "Warning Reason"       
+#define D_TRACKER_OPERATION_MODE "Tracker Operation Mode"
+*/
 //https://www.atakale.com.tr/image/catalog/urunler/charger/victron/pdf/victron_energy_haberlesme_protokolu_VE.Direct-Protocol-3.29.pdf
 VictronFieldDefinition victronFieldDefs[] = {
-  {"V",         "Battery Voltage",            TYPE_FLOAT, 1000, D_UNIT_VOLT},
-  {"V2",        "Battery 2 Voltage",          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Channel 2 (battery) voltage
-  {"V3",        "Battery 3 Voltage",          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Channel 3 (battery) voltage
-  {"VS",        "Auxiliary voltage",          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Auxiliary (starter) voltage • •
+  {"V",         D_BATTERY " " D_VOLTAGE,            TYPE_FLOAT, 1000, D_UNIT_VOLT},
+  {"V2",        D_BATTERY " 2 " D_VOLTAGE,          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Channel 2 (battery) voltage
+  {"V3",        D_BATTERY " 3 " D_VOLTAGE,          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Channel 3 (battery) voltage
+  {"VS",        D_AUXILIARY " " D_VOLTAGE,          TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Auxiliary (starter) voltage • •
   {"VM",        "",                           TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Mid-point voltage of the battery bank •
   {"DM",        "",                           TYPE_FLOAT,    1, "%"},                                      //  ‰ Mid-point deviation of the battery bank •
-  {"VPV",       "Panel Voltage",              TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Panel voltage •
+  {"VPV",       D_PANEL " " D_VOLTAGE,              TYPE_FLOAT, 1000, D_UNIT_VOLT},                              //  mV Panel voltage •
   {"PPV",       "Panel Power",                TYPE_FLOAT,    1, D_UNIT_WATT},                              //  W Panel power
   {"I",         "Battery Current",            TYPE_FLOAT, 1000, D_UNIT_AMPERE},                            //  mA Main or channel 1 battery current • • •
   {"I2",        "Battery 2 Current",          TYPE_FLOAT, 1000, D_UNIT_AMPERE},                            // mA Channel 2 battery current •
@@ -484,12 +546,12 @@ void CmndReadHistory(void){
   //  AddLog(LOG_LEVEL_DEBUG, PSTR("Victron Command Received"));
   //  //return true;
   //}
-  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron CMD"));
+  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron History"));
   //return false;
 }
 
 void CmndVictronPing(){
-  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron CMD"));
+  AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron Ping"));
 }
 /*********************************************************************************************\
  * Interface
@@ -518,6 +580,7 @@ bool Xnrg33(uint8_t function)
       victron_DrvInit();
       break;
     case FUNC_COMMAND:
+      AddLog(LOG_LEVEL_DEBUG, PSTR("In Victron CMD"));
       result = DecodeCommand(kVictronCommands, VictronCommands);
       break;
   }
