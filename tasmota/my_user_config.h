@@ -830,9 +830,9 @@
   #define DDSU666_SPEED        9600              // Chint DDSU666 Modbus RS485 serial speed (default: 9600 baud)
 //#define USE_SOLAX_X1                             // Add support for Solax X1 series Modbus log info (+3k1 code)
   #define SOLAXX1_SPEED        9600              // Solax X1 Modbus RS485 serial speed (default: 9600 baud)
-#define USE_VICTRON                               // Add support for Solax X1 series Modbus log info (+3k1 code)
-  #define VICTRON_SPEED        19200              // Solax X1 Modbus RS485 serial speed (default: 9600 baud)
 //  #define SOLAXX1_PV2                            // Solax X1 using second PV
+#define USE_VICTRON                               // Add support for Victron Solar Products (+??? code)
+  #define VICTRON_SPEED        19200              // Victron ve.direct serial speed (default: 19200 baud)
 //#define USE_LE01MR                               // Add support for F&F LE-01MR Modbus energy monitor (+1k code)
   #define LE01MR_SPEED         9600              // LE-01MR modbus baudrate (default: 9600)
   #define LE01MR_ADDR          1                 // LE-01MR modbus address (default: 0x01)

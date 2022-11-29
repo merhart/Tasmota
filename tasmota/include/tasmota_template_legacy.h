@@ -420,8 +420,8 @@ const uint16_t kGpioConvert[] PROGMEM = {
   AGPIO(GPIO_OLED_RESET),     // OLED Display Reset
   AGPIO(GPIO_SOLAXX1_TX),     // Solax Inverter tx pin
   AGPIO(GPIO_SOLAXX1_RX),     // Solax Inverter rx pin
-  AGPIO(GPIO_VICTRON_TX),     // Solax Inverter tx pin
-  AGPIO(GPIO_VICTRON_RX),     // Solax Inverter rx pin
+  AGPIO(GPIO_VICTRON_TX),     // Victron ve.direct tx pin
+  AGPIO(GPIO_VICTRON_RX),     // Victron ve.direct rx pin
   AGPIO(GPIO_ZIGBEE_TX),      // Zigbee Serial interface
   AGPIO(GPIO_ZIGBEE_RX),      // Zigbee Serial interface
   AGPIO(GPIO_RDM6300_RX),

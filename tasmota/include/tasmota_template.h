@@ -75,7 +75,7 @@ enum UserSelectablePins {
   GPIO_HRE_CLOCK, GPIO_HRE_DATA,       // HR-E Water Meter
   GPIO_ADE7953_IRQ,                    // ADE7953 IRQ
   GPIO_SOLAXX1_TX, GPIO_SOLAXX1_RX,    // Solax Inverter Serial interface
-  GPIO_VICTRON_TX, GPIO_VICTRON_RX,    // Victron Serial interface
+  GPIO_VICTRON_TX, GPIO_VICTRON_RX,    // Victron ve.direct Serial interface
   GPIO_ZIGBEE_TX, GPIO_ZIGBEE_RX,      // Zigbee Serial interface
   GPIO_RDM6300_RX,                     // RDM6300 RX
   GPIO_IBEACON_TX, GPIO_IBEACON_RX,    // HM17 IBEACON Serial interface
@@ -840,9 +840,9 @@ const uint16_t kGpioNiceList[] PROGMEM = {
   AGPIO(GPIO_SOLAXX1_RTS),     // Solax Inverter RTS pin
 #endif // USE_SOLAX_X1
 #ifdef USE_VICTRON
-  AGPIO(GPIO_VICTRON_TX),     // Solax Inverter tx pin
-  AGPIO(GPIO_VICTRON_RX),     // Solax Inverter rx pin
-#endif // USE_VICTRON_BLUE_SOLAR
+  AGPIO(GPIO_VICTRON_TX),     // Victron ve.direct tx pin
+  AGPIO(GPIO_VICTRON_RX),     // Victron ve.direct rx pin
+#endif // USE_VICTRON
 #ifdef USE_LE01MR
   AGPIO(GPIO_LE01MR_TX),     // F7F LE-01MR energy meter tx pin
   AGPIO(GPIO_LE01MR_RX),     // F7F LE-01MR energy meter rx pin
