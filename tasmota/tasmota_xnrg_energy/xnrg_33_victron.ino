@@ -182,21 +182,21 @@ PID2DeviceName DeviceLookUp[] = {
   "Phoenix Smart IP43 Charger 24|16 (3) 0xA347
 }
 */
-const char* EnergyFieldNames[] = {
-  "V",
-  "I",
-  "H20",
-  "H22",
-  "H18"
-};
-
-float* EnergyFields[] = {
-  &Energy.voltage[0],
-  &Energy.current[0],
-  &Energy.daily_sum,
-  &Energy.yesterday_sum,
-  &Energy.total_sum
-};
+//const char* EnergyFieldNames[] = {
+//  "V",
+//  "I",
+//  "H20",
+//  "H22",
+//  "H18"
+//};
+//
+//float* EnergyFields[] = {
+//  &Energy.voltage[0],
+//  &Energy.current[0],
+//  &Energy.daily_sum,
+//  &Energy.yesterday_sum,
+//  &Energy.total_sum
+//};
 
 struct VictronField {
   bool valid;
@@ -220,16 +220,16 @@ struct VictronFieldDefinition {
   const char* unit;
 
   bool try_parse(VictronField* field, const char* lbl, const char* value) {
-    float *energyTmp = NULL;
+    //float *energyTmp = NULL;
 
     if (strcasecmp(label, lbl))
       return false;
 
-    for(size_t i=0;i<(sizeof(EnergyFieldNames)/sizeof(EnergyFieldNames[0])); ++i){
-      if(!strcasecmp(lbl, EnergyFieldNames[i])){
-        energyTmp = EnergyFields[i];
-      }
-    }
+    //for(size_t i=0;i<(sizeof(EnergyFieldNames)/sizeof(EnergyFieldNames[0])); ++i){
+    //  if(!strcasecmp(lbl, EnergyFieldNames[i])){
+    //    energyTmp = EnergyFields[i];
+    //  }
+    //}
     switch (type) {
       case TYPE_INT:
         field->int_value = strtol(value, NULL, 0);
@@ -237,10 +237,10 @@ struct VictronFieldDefinition {
       case TYPE_FLOAT:
         field->float_value = atof(value);
         field->float_value /= divider;
-        if(energyTmp){
-          *energyTmp = field->float_value;
-          //AddLog(LOG_LEVEL_DEBUG, PSTR("Energy field: %s = %f"),lbl, *energyTmp);
-        }
+        //if(energyTmp){
+        //  *energyTmp = field->float_value;
+        //  //AddLog(LOG_LEVEL_DEBUG, PSTR("Energy field: %s = %f"),lbl, *energyTmp);
+        //}
         break;
       case TYPE_BOOL:
         field->bool_value = !strcmp(value, "ON");
@@ -513,24 +513,22 @@ void victron_EverySecond(void) {
   uint8_t DataRead[256] = {0};
   VictronFieldDefinition *field;
   uint8_t bytesReceived = victron_Receive(DataRead);
+  //AddLog(LOG_LEVEL_DEBUG, PSTR("Victron Bytes Received: %d"), bytesReceived);
   if(bytesReceived){
     victron_parse_live_data(DataRead, bytesReceived);
-    Energy.phase_count = 1;
-    Energy.voltage_common = true;
-    Energy.data_valid[0] = 0;
-    Energy.active_power[0] = Energy.voltage[0] * abs(Energy.current[0]);
+    Energy.phase_count = 0;
+    //Energy.voltage_common = true;
+    //Energy.data_valid[0] = 0;
+    //Energy.active_power[0] = Energy.voltage[0] * abs(Energy.current[0]);
     //Energy.current[0] =      1.78; // AC Current
     //Energy.voltage[0] =      14.2; // AC Voltage
     //Energy.frequency[0] =    50; // AC Frequency
     //Energy.active_power[0] = 20; // AC Power
-    Energy.type_dc = true;
+    //Energy.type_dc = true;
     //AddLog(LOG_LEVEL_DEBUG, PSTR("Energy Volts: %f | Energy current: %f"),Energy.voltage[0], Energy.current[0]);
+    //EnergyUpdateToday();
   }
-
-  //EnergyUpdateToday();
-  
 }
-
 
 void victron_DrvInit(void) 
 {
@@ -541,9 +539,13 @@ void victron_DrvInit(void)
   //Energy.use_overtemp = NRG_DUMMY_OVERTEMP;      // Use global temperature for overtemp detection
   if (PinUsed(GPIO_VICTRON_RX) && PinUsed(GPIO_VICTRON_TX)) {
     TasmotaGlobal.energy_driver = XNRG_33;
+    AddLog(LOG_LEVEL_DEBUG, PSTR("Victron DrvInit"));
+  }
+  else {
+    AddLog(LOG_LEVEL_DEBUG, PSTR("Victron DrvInit FAILED"));
   }
   //TasmotaGlobal.energy_driver = XNRG_33;
-  AddLog(LOG_LEVEL_DEBUG, PSTR("Victron DrvInit"));
+  
 }
 
 void victron_SnsInit(void)
@@ -557,7 +559,6 @@ void victron_SnsInit(void)
     TasmotaGlobal.energy_driver = ENERGY_NONE;
     AddLog(LOG_LEVEL_INFO, "VICTRON SnsInit failed");
   }
-  //TasmotaGlobal.energy_driver = XNRG_33;
   AddLog(LOG_LEVEL_INFO, "VICTRON SnsInit");
 }
 
@@ -566,11 +567,13 @@ void victron_Show(bool json){
   for (size_t i = 0; i < (sizeof(victronFieldDefs) / sizeof(victronFieldDefs[0])); ++i) {
     jsonElements += victronFieldDefs[i].output(&victronFields[i], json, jsonElements);
   }
-  //AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Json Elements appended: %d"), jsonElements);
-  if(json){
+  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("Json Elements appended: %d"), jsonElements);
+  // only append curly bracket if there was a Victron response
+  if(json && jsonElements){       
     ResponseAppend_P(PSTR("}"));
   }
 }
+
 /*********************************************************************************************\
  * Commands
 \*********************************************************************************************/
